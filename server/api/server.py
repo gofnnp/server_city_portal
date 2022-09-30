@@ -3,10 +3,11 @@ import requests
 import argparse
 
 from flask import Flask, abort, request, jsonify
+from flask_cors import CORS
+from db.execptions import UserNotFoundException
+from db.interaction.interaction import DbInteraction
 
 from utils import config_parser
-from db.execptions import UrlNotFoundException, UserNotFoundException
-from db.interaction.interaction import DbInteraction
 
 
 class Server:
@@ -25,10 +26,13 @@ class Server:
         )
 
         self.app = Flask(__name__)
+        CORS(self.app)
         #self.app.add_url_rule('/shutdown', view_func=self.shutdown)
         self.app.add_url_rule('/', view_func=self.get_home)
         self.app.add_url_rule('/home', view_func=self.get_home)
         self.app.add_url_rule('/add_user', view_func=self.add_user, methods=['POST'])
+        self.app.add_url_rule('/add_request', view_func=self.add_request, methods=['POST'])
+        self.app.add_url_rule('/get_last4_requests', view_func=self.get_last4_requests)
         self.app.add_url_rule('/auth', view_func=self.auth, methods=['POST'])
         self.app.add_url_rule('/get_all_users_info', view_func=self.get_all_users_info)
         self.app.add_url_rule('/edit_user_info/<phone>', view_func=self.edit_user_info, methods=['PUT'])
@@ -73,6 +77,17 @@ class Server:
             password=request_body["password"],
             email=request_body["email"]
         )
+        return response, 201
+
+    def add_request(self):
+        request_body = dict(request.json)
+        response = self.db_interaction.add_request(
+            request_body
+        )
+        return response, 201
+
+    def get_last4_requests(self):
+        response = self.db_interaction.get_last4_requests()
         return response, 201
 
     def auth(self):
@@ -166,12 +181,12 @@ class Server:
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--config', type=str, dest='config')
+    # parser = argparse.ArgumentParser()
+    # parser.add_argument('--config', type=str, dest='config')
 
-    args = parser.parse_args()
+    # args = parser.parse_args()
 
-    config = config_parser(args.config)
+    config = config_parser('D:/work/server_city_portal/server/api/config.txt')
 
     server_host = config['SERVER_HOST']
     server_port = config['SERVER_PORT']
